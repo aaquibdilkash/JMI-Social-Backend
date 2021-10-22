@@ -20,6 +20,8 @@ app.use("/", (req, res) => {
     res.send("Hello to Full Stack API!")
 })
 
+// CONNECTION_URL = "mongodb+srv://fullStack:fullStack123@cluster0.3xujc.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
+
 const PORT = process.env.PORT || 5000
 
 mongoose.connect(process.env.CONNECTION_URL, { useNewUrlParser: true, useUnifiedTopology: true}).then(() => {
@@ -27,6 +29,7 @@ mongoose.connect(process.env.CONNECTION_URL, { useNewUrlParser: true, useUnified
         console.log(`Server running on port: ${PORT}`)
     })
 }).catch((error) => {
-    console.log(error.message)
-})
+    console.log(`${error} did not connect`)
+});
+
 
