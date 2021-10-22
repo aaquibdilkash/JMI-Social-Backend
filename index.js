@@ -20,8 +20,6 @@ app.use("/", (req, res) => {
     res.send("Hello to Full Stack API!")
 })
 
-// CONNECTION_URL = "mongodb+srv://fullStack:fullStack123@cluster0.3xujc.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
-
 const PORT = process.env.PORT || 5000
 
 mongoose.connect(process.env.CONNECTION_URL, { useNewUrlParser: true, useUnifiedTopology: true}).then(() => {
