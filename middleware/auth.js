@@ -8,7 +8,7 @@ import jwt from "jsonwebtoken"
         let decodedData
 
         if(token && isCustomAuth) {
-            decodedData = jwt.verify(token, "test")
+            decodedData = jwt.verify(token, process.env.SECURE)
             req.user = decodedData
 
             // jwt.verify(token, "test", (err, decoded) => {
