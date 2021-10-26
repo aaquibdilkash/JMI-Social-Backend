@@ -9,7 +9,7 @@ export const getPosts = async (req, res) => {
         const LIMIT =  8
         const startIndex = (Number(page) -1)*LIMIT
         const total = await PostMessage.countDocuments({})
-        const postMessages = await PostMessage.find().sort({_id: -1}).limit(LIMIT).skip(startIndex)
+        const postMessages = await PostMessage.find().sort({_id: -1}).limit(LIMIT).skip(startIndex).populate("comments.author").populate("creator")
         console.log(postMessages)
         res.status(200).json({data: postMessages, currentPage: Number(page), numberOfPages: Math.ceil(total/LIMIT)})
     } catch(error) {
@@ -23,7 +23,7 @@ export const getPostBySearch = async (req, res) => {
     try {
         const title = new RegExp(searchQuery, "i")
 
-        const posts = await PostMessage.find({ $or: [ {title}, { tags: { $in: tags.split(",") } } ] })
+        const posts = await PostMessage.find({ $or: [ {title}, { tags: { $in: tags.split(",") } } ] }).populate("comments.author").populate("creator")
 
         res.json({data: posts})
     } catch(error) {
@@ -32,10 +32,10 @@ export const getPostBySearch = async (req, res) => {
 }
 
 export const getPostsByCreator = async (req, res) => {
-    const { name } = req.query;
-
+    const { id } = req.query;
+    const _id = new mongoose.Types.ObjectId(id);
     try {
-        const posts = await PostMessage.find({ name });
+        const posts = await PostMessage.find(_id).populate("comments.author").populate("creator");
 
         res.json({ data: posts });
     } catch (error) {    
@@ -47,7 +47,7 @@ export const getPost = async (req, res) => {
     const { id } = req.params;
 
     try {
-        const post = await PostMessage.findById(id);
+        const post = await PostMessage.findById(id).populate("comments.author").populate("creator");
         
         res.status(200).json(post);
     } catch (error) {
@@ -59,10 +59,13 @@ export const createPost = async (req, res) => {
     // res.send("Post Created!")
     const post = req.body
 
-    const newPost = new PostMessage({...post, creator: req.user.id, createdAt: new Date().toISOString()})
+    let newPost = new PostMessage({...post, creator: req.user.id, createdAt: new Date().toISOString()})
 
     try {
-        await newPost.save()
+        await newPost.save().then( async (doc) => {
+            newPost = await doc.populate("creator")
+            console.log(newPost, "%%%%%%%%%%%%%")
+        })
 
         res.status(201).json(newPost)
     } catch(error) {
@@ -77,7 +80,7 @@ export const updatePost = async (req, res) => {
 
     if(!mongoose.Types.ObjectId.isValid(_id)) return res.status(404).send("No post with that id")
 
-    const updatedPost = await PostMessage.findByIdAndUpdate(_id, {_id, ...post}, {new: true})
+    const updatedPost = await PostMessage.findByIdAndUpdate(_id, {_id, ...post}, {new: true}).populate("comments.author").populate("creator")
 
     res.json(updatedPost)
 
@@ -114,7 +117,7 @@ export const likePost = async (req, res) => {
         post.likes = post.likes.filter((id) => id !== String(req.user.id))
     }
 
-    const updatedPost = await PostMessage.findByIdAndUpdate(_id, post, {new: true})
+    const updatedPost = await PostMessage.findByIdAndUpdate(_id, post, {new: true}).populate("comments.author").populate("creator")
 
     res.json(updatedPost)
 
@@ -122,13 +125,43 @@ export const likePost = async (req, res) => {
 
 export const commentPost = async (req, res) => {
     const { id } = req.params;
-    const { value } = req.body;
+    const comment = req.body;
+
+    console.log(comment, "%%%%%%%%%%%before post fetch")
 
     const post = await PostMessage.findById(id);
 
-    post.comments.push(value);
+    console.log(comment, "%%%%%%%%%%%after post fetch")
 
-    const updatedPost = await PostMessage.findByIdAndUpdate(id, post, { new: true });
+    post.comments.push(comment);
+
+    const updatedPost = await PostMessage.findByIdAndUpdate(id, post, { new: true }).populate("comments.author").populate("creator");
 
     res.json(updatedPost);
+};
+
+export const commentDelete = async (req, res) => {
+    const { id, commentId } = req.params;
+
+    console.log(commentId, "%%%%%%%%%%%before post update")
+
+    const post = await PostMessage.findById(id);
+
+    const updatedComments = post.comments.filter(item => {
+        if(item._id !== commentId) return item
+    })
+
+    post.comments = updatedComments
+
+    // const updatedPost = await PostMessage.findByIdAndUpdate(
+    //     {_id: id},
+    //     { $pull: { comments: commentId } },
+    //     { new: true }
+    // ).populate("comments.author").populate("creator")
+
+    console.log(post.comments.length, "%%%%%%%%%%%after post update")
+
+    // const updatedPost = await PostMessage.findByIdAndUpdate(id, post, { new: true }).populate("comments.author").populate("creator");
+
+    res.json(post);
 };
